@@ -8,20 +8,24 @@ import pygame
 import pygame.camera
 import random
 
-pygame.mixer.pre_init()
+pygame.mixer.pre_init()                                             # https://nerdparadise.com/programming/pygame/part3
 pygame.init()
-pygame.camera.init()
-pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096)
+pygame.camera.init()                                                # to display the output of a webcam
+pygame.mixer.init(frequency=22050, size=-16, channels=2, buffer=4096) 
+                                                                    # for us ch=1 (number of songs you can play simultaneously riptutorial, http://141.84.8.93/lehre/ss16/mmp/vorlesung/mmp10.pdf
 
 snare = pygame.mixer.Sound("E_SNARE_02.wav")
 tom1 = pygame.mixer.Sound("tomtomdrum7.wav")
 tom2 = pygame.mixer.Sound("tomtomdrum6.wav")
 hihat = pygame.mixer.Sound("hihat22.wav")
+
+'''
 synchNoise = pygame.mixer.Sound("cowbell9.wav")
 based = pygame.mixer.Sound("01-Based-Is-How-You-Feel-Inside.wav")
 over = pygame.mixer.Sound("vegetaover9000.wav")
 bonzo = pygame.mixer.Sound("Led-Zeppelin-Coda-Bonzo's-Montreux.wav")
 yyz = pygame.mixer.Sound("Rush-yyz.wav")
+'''
 
 tom2Coords = (50, 450, 350, 650)
 tom1Coords = (375, 500, 675, 700)
@@ -30,9 +34,9 @@ hihatCoords = (900, 200, 1250, 400)
 
 # opencv stuff
 CAMERA_INDEX = 0
-capture = cv.CaptureFromCAM(CAMERA_INDEX)
-sampleFrame = cv.QueryFrame(capture)
-imageSize = cv.GetSize(sampleFrame)
+capture = cv.CaptureFromCAM(CAMERA_INDEX)    # cv.VideoCapture / ?
+sampleFrame = cv.QueryFrame(capture)         # With cv frame was an object with some type, and with cv2 frame is np.ndarray. cv2: simple read()
+imageSize = cv.GetSize(sampleFrame)          # ??
 imageSize = 1280, 720
 
 
@@ -42,17 +46,17 @@ imageSize = 1280, 720
 
 class Stick(object):
     def __init__(self, color):
-        self.frame = cv.QueryFrame(capture)
+        self.frame = cv.QueryFrame(capture)                   #? 
         self.color = color
-        self.imageSize = cv.GetSize(self.frame)
-        self.channels3 = cv.CreateImage(self.imageSize, 8, 3)
-        self.channels1 = cv.CreateImage(self.imageSize, 8, 1)
+        self.imageSize = cv.GetSize(self.frame)               #?
+        self.channels3 = cv.CreateImage(self.imageSize, 8, 3) 
+        self.channels1 = cv.CreateImage(self.imageSize, 8, 1) #?
         if self.color == "red":
-            self.hueRange = (110, 140, 110, 140)
+            self.hueRange = (110, 140, 110, 140)              # r, b, g, opacity? nope!
         elif self.color == "blue":
             self.hueRange = (165, 180, 0, 15)
         self.rectPoints = (0, 0, 0, 0)
-        self.last50Centers = [(0,0)]*50
+        self.last50Centers = [(0,0)]*50                       # storing 50 positions of the stick
         self.wasInSnare = False
         self.wasInTom1 = False
         self.wasInTom2 = False
@@ -70,22 +74,22 @@ class Stick(object):
         threshold2 = cv.CloneImage(self.channels1)
         
         cv.CvtColor(clone, hsv, cv.CV_RGB2HSV)
-        cv.InRangeS(hsv, (hueRange[0], 80, 80), (hueRange[1], 255, 255),
+        cv.InRangeS(hsv, (hueRange[0], 80, 80), (hueRange[1], 255, 255),      # Squashes the image to only store the part of the image that has given hsv range 
                    threshold)
         cv.InRangeS(hsv, (hueRange[2], 80, 80), (hueRange[3], 255, 255),
-                    threshold2)
-        cv.Add(threshold, threshold2, threshold)
-        cv.Erode(threshold, threshold, iterations = 5)
-        cv.Dilate(threshold, threshold, iterations = 5)
+                   threshold2)
+        cv.Add(threshold, threshold2, threshold)         # eroded and dilated to remove the smaller contours
+        cv.Erode(threshold, threshold, iterations = 5)   # https://docs.opencv.org/3.4/db/df6/tutorial_erosion_dilatation.html min filters
+        cv.Dilate(threshold, threshold, iterations = 5)  # max filters
         
-        cv.ShowImage(self.color, threshold)
+        cv.ShowImage(self.color, threshold)             
 
         memory = cv.CreateMemStorage(0)
         clone2 = cv.CloneImage(threshold)
         contours = cv.FindContours(clone2, memory,
-                                   cv.CV_RETR_LIST,
-                                   cv.CV_CHAIN_APPROX_SIMPLE,
-                                   (0, 0) )
+                                   cv.CV_RETR_LIST,     
+                                   cv.CV_CHAIN_APPROX_SIMPLE,      
+                                   (0, 0) )             #CHAIN_APPROX_SIMPLE
         if not contours:
             rectPoints = oldRectPoints
         else:
